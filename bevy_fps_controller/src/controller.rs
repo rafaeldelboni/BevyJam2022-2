@@ -12,7 +12,6 @@ impl Plugin for FpsControllerPlugin {
         app.register_type::<FpsController>()
             .register_type::<FpsControllerInput>()
             .add_system(fps_controller_input)
-            .add_system(fps_controller_look)
             .add_system(fps_controller_move)
             .add_system(fps_controller_render);
     }
@@ -186,13 +185,6 @@ pub fn fps_controller_input(
     }
 }
 
-pub fn fps_controller_look(mut query: Query<(&mut FpsController, &FpsControllerInput)>) {
-    for (mut controller, input) in query.iter_mut() {
-        controller.pitch = input.pitch;
-        controller.yaw = input.yaw;
-    }
-}
-
 pub fn fps_controller_move(
     time: Res<Time>,
     physics_context: Res<RapierContext>,
@@ -219,6 +211,7 @@ pub fn fps_controller_move(
         let right = orientation * Vec3::X;
         let forward = orientation * -Vec3::Z;
         let position = transform.translation;
+        let rotation = transform.rotation;
 
         match controller.move_mode {
             MoveMode::Noclip => {
@@ -265,7 +258,7 @@ pub fn fps_controller_move(
                     let ground_hit = physics_context
                         .cast_shape(
                             position,
-                            orientation,
+                            rotation,
                             cast_velocity,
                             &cast_capsule,
                             max_distance,
@@ -330,7 +323,6 @@ pub fn fps_controller_move(
                             dt,
                             &mut end_velocity,
                         );
-                        end_velocity.y -= controller.gravity * dt;
                         let air_speed = end_velocity.xz().length();
                         if air_speed > controller.max_air_speed {
                             let ratio = controller.max_air_speed / air_speed;
@@ -338,6 +330,7 @@ pub fn fps_controller_move(
                             end_velocity.z *= ratio;
                         }
                     }
+                    end_velocity.y -= controller.gravity * dt;
 
                     // At this point our collider may be intersecting with the ground
                     // Fix up our collider by offsetting it to be flush with the ground
@@ -402,13 +395,13 @@ fn get_axis(key_input: &Res<Input<KeyCode>>, key_pos: KeyCode, key_neg: KeyCode)
 
 pub fn fps_controller_render(
     logical_query: Query<
-        (&Transform, &Collider, &FpsController, &LogicalPlayer),
+        (&Transform, &Collider, &FpsControllerInput, &LogicalPlayer),
         With<LogicalPlayer>,
     >,
     mut render_query: Query<(&mut Transform, &RenderPlayer), Without<LogicalPlayer>>,
 ) {
     // TODO: inefficient O(N^2) loop, use hash map?
-    for (logical_transform, collider, controller, logical_player_id) in logical_query.iter() {
+    for (logical_transform, collider, input, logical_player_id) in logical_query.iter() {
         if let Some(capsule) = collider.as_capsule() {
             for (mut render_transform, render_player_id) in render_query.iter_mut() {
                 if logical_player_id.0 != render_player_id.0 {
@@ -418,7 +411,7 @@ pub fn fps_controller_render(
                 let camera_height = capsule.segment().b().y + capsule.radius() * 0.75;
                 render_transform.translation =
                     logical_transform.translation + Vec3::Y * camera_height;
-                render_transform.rotation = look_quat(controller.pitch, controller.yaw);
+                render_transform.rotation = look_quat(input.pitch, input.yaw);
             }
         }
     }

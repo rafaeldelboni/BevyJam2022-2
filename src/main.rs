@@ -228,13 +228,13 @@ fn setup_player(
         //TODO why so short?
         .insert(Collider::capsule(Vec3::Y * 0.0, Vec3::Y * 0.7, 0.5))
         .insert(ActiveEvents::COLLISION_EVENTS)
+        .insert(Ccd::enabled()) // Prevent clipping when going fast
         .insert(Velocity::zero())
         .insert(RigidBody::Dynamic)
         .insert(Sleeping::disabled())
         .insert(LockedAxes::ROTATION_LOCKED)
         .insert(AdditionalMassProperties::Mass(1.0))
         .insert(GravityScale(0.0))
-        .insert(Ccd { enabled: true }) // Prevent clipping when going fast
         .insert(LogicalPlayer(0))
         .insert(FpsControllerInput {
             pitch: 0.0,
@@ -248,7 +248,7 @@ fn setup_player(
             walk_speed: 4.0,
             air_acceleration: 800.0, // bhop :D
             jump_speed: 6.0,
-            key_jump: None,
+            key_jump: Some(KeyCode::Space),
             key_fly: None,
             ..default()
         })
@@ -329,7 +329,7 @@ fn hide_mouse(mut windows: ResMut<Windows>) {
     let primary_win = windows.primary_mut();
     primary_win.set_cursor_visibility(false);
     primary_win.set_cursor_lock_mode(true);
-    primary_win.set_cursor_position(vec2(0.0, 0.0));
+    //primary_win.set_cursor_position(vec2(0.0, 0.0));
 }
 
 fn toggle_mouse(
@@ -346,14 +346,16 @@ fn toggle_mouse(
         if is_locked {
             // Unlock
             fps_controller.enable_input = false;
+            println!("is_locked {}", is_locked);
             window.set_cursor_visibility(true);
             window.set_cursor_lock_mode(false);
         } else {
             // Lock
             fps_controller.enable_input = true;
+            println!("is_locked {}", is_locked);
             window.set_cursor_visibility(false);
             window.set_cursor_lock_mode(true);
-            window.set_cursor_position(vec2(window.width() / 2.0, window.height() / 2.0));
+            //window.set_cursor_position(vec2(window.width() / 2.0, window.height() / 2.0));
         }
     }
     if keys.just_pressed(KeyCode::Escape)

@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-bevy = { version = "0.8", features = [
+bevy = { version = "0.8.1", features = [
   "flac",
   "jpeg",
   "ktx2",
